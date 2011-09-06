@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+#hint: test different compilers and options (O0, O1, Os)
+rm main.o
+gcc-4.4 -Os -nostdlib -fomit-frame-pointer -fno-inline -c small.c -o main.o
+ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 main.o /usr/lib64/libSDL.so /usr/lib64/libSDL_gfx.so -o s
+du -b s
+
+strip -s -R .comment -R .gnu.version s
+#sstrip s
+
+7z a -tGZip -mx=9 s.gz s > /dev/null #be quiet
+cat unpack.header s.gz > 4k.bin
+chmod a+x 4k.bin
+rm s.gz s
+
+du -b 4k.bin
+
