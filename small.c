@@ -6,8 +6,8 @@
 #include "unistd.h"
 
 //defines are cheaper than variables
-#define WIDTH   1680
-#define HEIGHT  1050
+#define WIDTH   800
+#define HEIGHT  600
 
 
 void drawWhite(SDL_Surface *screen){
