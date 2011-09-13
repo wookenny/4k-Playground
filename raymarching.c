@@ -28,17 +28,6 @@
 int spheres[] = {0,0,100,100,
 		-200,50,100,80};
 
-void setpixel(SDL_Surface *screen, int x, int y, Uint8 r, Uint8 g, Uint8 b){
-
-    Uint32 *pixmem32;
-    Uint32 color;  
- 
-    color = SDL_MapRGB( screen->format, r, g, b );
-  
-    pixmem32 = (Uint32*) screen->pixels  + y + x;
-    *pixmem32 = color;
-}
-
 float DistanceFunc(float x, float y, float z){
 	int i;
 	float min_t = MAX_DIST;
@@ -46,10 +35,9 @@ float DistanceFunc(float x, float y, float z){
 	min_t = min( min_t, sqrt( (x-spheres[0])*(x-spheres[0]) + (y-spheres[1])*(y-spheres[1]) + (z-spheres[2])*(z-spheres[2]) )-spheres[3] ); 
 	min_t = min( min_t, sqrt( (x-spheres[4])*(x-spheres[4]) + (y-spheres[5])*(y-spheres[5]) + (z-spheres[6])*(z-spheres[6]) )-spheres[7] ); 
 
-
-	//plane at height 200:
-	//min_t = min( min_t, (200)-y );
-	min_t = min( min_t, (200+10*sin(x*0.05)*sin(z*0.05))-y );
+	//sinus plane with cutoff
+	if(x*x + z*z < 500*500 )
+		min_t = min( min_t, (200+10*sin(x*0.05)*sin(z*0.05))-y );
 	return min_t;
 }
 
@@ -64,6 +52,8 @@ int shade(float l_x, float l_y, float l_z, float n_x, float n_y, float n_z){
 }
 
 
+#define getNormal(x,y,z,n_x,n_y,n_z) {float len; *n_x = DistanceFunc(x+EPSILON,y,z)-DistanceFunc(x-EPSILON,y,z);	*n_y = DistanceFunc(x,y+EPSILON,z)-DistanceFunc(x,y-EPSILON,z);	   	*n_z = DistanceFunc(x,y,z+EPSILON)-DistanceFunc(x,y,z-EPSILON);	len = length(*n_x,*n_y,*n_z);  	*n_x/=len; *n_y/=len; *n_z/=len; }
+/*
 void getNormal( float x, float y, float z, float *n_x, float *n_y, float *n_z )
 {
 	 
@@ -76,7 +66,7 @@ void getNormal( float x, float y, float z, float *n_x, float *n_y, float *n_z )
 	*n_x/=len; *n_y/=len; *n_z/=len;  
 	return;
 }
-
+*/
 
 void trace(SDL_Surface* screen, int x, int y){
 
@@ -127,14 +117,8 @@ void DrawScreen(SDL_Surface* screen)
 			trace(screen,x,y);
 	SDL_Flip(screen); 
 	
-	spheres[0] = (rand()%2)?spheres[0]+1:spheres[0]-1;
-	spheres[1] = (rand()%2)?spheres[1]+1:spheres[1]-1;
-	spheres[2] = (rand()%2)?spheres[2]+1:spheres[2]-1;
-	spheres[3] = (rand()%2)?spheres[3]+1:spheres[3]-1;
-	spheres[4] = (rand()%2)?spheres[4]+1:spheres[4]-1;
-	spheres[5] = (rand()%2)?spheres[5]+1:spheres[5]-1;
-	spheres[6] = (rand()%2)?spheres[6]+1:spheres[6]-1;
-	spheres[7] = (rand()%2)?spheres[7]+1:spheres[7]-1;
+	spheres[3] += 1; 
+	spheres[7] -= 1;
 }
 
 
