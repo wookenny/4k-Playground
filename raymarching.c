@@ -45,6 +45,11 @@ float DistanceFunc(float x, float y, float z){
 	//sphere at 0,0,100 with radius 100
 	min_t = min( min_t, sqrt( (x-spheres[0])*(x-spheres[0]) + (y-spheres[1])*(y-spheres[1]) + (z-spheres[2])*(z-spheres[2]) )-spheres[3] ); 
 	min_t = min( min_t, sqrt( (x-spheres[4])*(x-spheres[4]) + (y-spheres[5])*(y-spheres[5]) + (z-spheres[6])*(z-spheres[6]) )-spheres[7] ); 
+
+
+	//plane at height 200:
+	//min_t = min( min_t, (200)-y );
+	min_t = min( min_t, (200+10*sin(x*0.05)*sin(z*0.05))-y );
 	return min_t;
 }
 
