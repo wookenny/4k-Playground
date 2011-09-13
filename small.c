@@ -78,6 +78,7 @@ void drawThings(SDL_Surface *screen, float MinRe, float MaxRe,float MinIm)
 	}
 	SDL_UnlockSurface(screen);
 	SDL_UpdateRect (screen, 0, 0, WIDTH, HEIGHT);
+	    SDL_Flip(screen); 
 	return;
 }
 
