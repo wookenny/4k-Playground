@@ -8,11 +8,25 @@
 #define DEPTH 32
 
 #define min(x,y) x<y?x:y
+#define max(x,y) x<y?y:x
+#define length(x,y,z) sqrt(x*x+y*y+z*z)
 
 //raymarching functions
 #define MAX_DIST  10000
 #define EPSILON 0.1
 
+#define LIGHT_X 640
+#define LIGHT_Y -480
+#define LIGHT_Z -480
+
+
+#define FPS_INTERVAL 1.0 //seconds.
+
+
+// you would initalise these in a main method, really.
+
+int spheres[] = {0,0,100,100,
+		-200,50,100,80};
 
 void setpixel(SDL_Surface *screen, int x, int y, Uint8 r, Uint8 g, Uint8 b){
 
@@ -26,22 +40,44 @@ void setpixel(SDL_Surface *screen, int x, int y, Uint8 r, Uint8 g, Uint8 b){
 }
 
 float DistanceFunc(float x, float y, float z){
-
-
+	int i;
 	float min_t = MAX_DIST;
 	//sphere at 0,0,100 with radius 100
-	min_t = min( min_t, sqrt(x*x + y*y + (z-100)*(z-100))-100 ); 
-	
-	min_t = min( min_t, sqrt((x+200)*(x+200) + (y-50)*(y-50) + (z-100)*(z-100))-80 ); 
-	//cube at 100,100,100 with side length 50
-	//_t = min( min_t, min(min(fabs(x-100),fabs(y-100)),fabs(z-100))-50);
+	min_t = min( min_t, sqrt( (x-spheres[0])*(x-spheres[0]) + (y-spheres[1])*(y-spheres[1]) + (z-spheres[2])*(z-spheres[2]) )-spheres[3] ); 
+	min_t = min( min_t, sqrt( (x-spheres[4])*(x-spheres[4]) + (y-spheres[5])*(y-spheres[5]) + (z-spheres[6])*(z-spheres[6]) )-spheres[7] ); 
 	return min_t;
 }
+
+
+
+int shade(float l_x, float l_y, float l_z, float n_x, float n_y, float n_z){
+	//NORMALIZE BEFORE CALL
+	float cos_L_N = l_x*n_x + l_y*n_y + l_z*n_z;
+	cos_L_N = max(0,cos_L_N);
+	return ( (int)(255*cos_L_N) <<16  | (int)(255*cos_L_N) <<8 | (int)(255*cos_L_N) ); 
+	//return normal*lightvector
+}
+
+
+void getNormal( float x, float y, float z, float *n_x, float *n_y, float *n_z )
+{
+	 
+	float len;
+	*n_x = DistanceFunc(x+EPSILON,y,z)-DistanceFunc(x-EPSILON,y,z);
+	*n_y = DistanceFunc(x,y+EPSILON,z)-DistanceFunc(x,y-EPSILON,z);	
+   	*n_z = DistanceFunc(x,y,z+EPSILON)-DistanceFunc(x,y,z-EPSILON);	
+	
+	len = length(*n_x,*n_y,*n_z);   
+	*n_x/=len; *n_y/=len; *n_z/=len;  
+	return;
+}
+
 
 void trace(SDL_Surface* screen, int x, int y){
 
 	float t = 0, d = 0;
 	float o1 ,o2 ,o3 ,d1,d2,d3, len;
+	float p_x,p_y,p_z,n_x, n_y, n_z, l_x, l_y, l_z;
 	int* v = screen->pixels;
 	//origin	
 	o1 = o2 = 0;
@@ -51,8 +87,7 @@ void trace(SDL_Surface* screen, int x, int y){
 	d2 = -.5*HEIGHT + y - o2;   
 	d3 =  0-o3;//z
 	//normalize direction
-	len = d1*d1+d2*d2+d3*d3; 
-	len = sqrt(len);
+	len = length(d1,d2,d3); 
 	d1/=len; d2/=len; d3/=len;
 	while(t < MAX_DIST)
 	{
@@ -63,35 +98,38 @@ void trace(SDL_Surface* screen, int x, int y){
 	//if(x==y)
 		//printf("%d:%d = %4.2f\n",x,y,t);
 	if( t >= MAX_DIST  ){// No "collision" 
-		v[y * WIDTH + x]  = 255<<16;
-		//setpixel(screen,x,y,255,0,0);
-		//pixelRGBA(screen, x, y, 255,0,0);
+		v[y * WIDTH + x]  = 12<<16 | 12<<8 | 80;
+
 	}else{ //do some shading with rayStart + rayDir * t
-		//pixelRGBA(screen, x, y, 0,0,255);
-		//setpixel(screen,x,y,0,0,255);	
-		v[y * WIDTH + x] = 255<<16 | 255<<8 | 255 ; 	
+
+		//calculate normal and shade it
+		p_x = o1+d1*t; p_y = o2+d2*t; p_z = o3+d3*t;
+		getNormal( p_x, p_y, p_z, &n_x, &n_y, &n_z );
+		l_x = LIGHT_X - p_x; 
+		l_y = LIGHT_Y - p_y;
+		l_z = LIGHT_Z - p_z;
+		len = length(l_x, l_y, l_z);
+		l_x/=len; l_y/=len; l_z/=len;
+		v[y * WIDTH + x] = shade(l_x, l_y, l_z,  n_x, n_y, n_z) ; 	
 	}
 }
 
 void DrawScreen(SDL_Surface* screen)
 { 
-    int x,y;
-
-    //SDL_FillRect(screen, 0, 0);
-    //SDL_LockSurface(screen);
-    
-    for(y = 0; y < HEIGHT; y++ ) 
-    {
-        for( x = 0; x < WIDTH; x++ ) 
-        {
-
-		trace(screen,x,y);
-        }
-    }
-
-    //SDL_UnlockSurface(screen);
-    //SDL_UpdateRect (screen, 0, 0,0,0);
-    SDL_Flip(screen); 
+	int x,y;
+	for(y = 0; y < HEIGHT; y++ ) 
+		for( x = 0; x < WIDTH; x++ ) 
+			trace(screen,x,y);
+	SDL_Flip(screen); 
+	
+	spheres[0] = (rand()%2)?spheres[0]+1:spheres[0]-1;
+	spheres[1] = (rand()%2)?spheres[1]+1:spheres[1]-1;
+	spheres[2] = (rand()%2)?spheres[2]+1:spheres[2]-1;
+	spheres[3] = (rand()%2)?spheres[3]+1:spheres[3]-1;
+	spheres[4] = (rand()%2)?spheres[4]+1:spheres[4]-1;
+	spheres[5] = (rand()%2)?spheres[5]+1:spheres[5]-1;
+	spheres[6] = (rand()%2)?spheres[6]+1:spheres[6]-1;
+	spheres[7] = (rand()%2)?spheres[7]+1:spheres[7]-1;
 }
 
 
@@ -99,22 +137,25 @@ void _start()
 {
     SDL_Event event;
     SDL_Surface *screen;
+    int lastTime = SDL_GetTicks();
     screen = SDL_SetVideoMode (WIDTH, HEIGHT,  32, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_HWACCEL /*|SDL_FULLSCREEN*/ );
 
   
     do{
 	DrawScreen(screen);
 	SDL_PollEvent(&event);
+	//while(SDL_GetTicks() - lastTime < 40 )  SDL_Delay(5); //milliseconds	
 	
+
     } while ( event.type!=SDL_KEYDOWN );
 
     SDL_Quit();
 
-asm ( \
-         "movl $1,%eax\n" \
-         "xor %ebx,%ebx\n" \
-         "int $128\n" \
-         );
+	asm ( \
+		 "movl $1,%eax\n" \
+		 "xor %ebx,%ebx\n" \
+		 "int $128\n" \
+		 );
 
 }
 
